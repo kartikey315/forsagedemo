@@ -2,14 +2,40 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+
+import Loadwallet from './connectWallet';
+import Dapp from './dapp';
 import reportWebVitals from './reportWebVitals';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+    <Routes>
+      <Route path="/"element={<App />} />
+      <Route path="/ref=:id"element={<App />} />
+    </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
+// const wallet = ReactDOM.createRoot(document.getElementById('wallet'));
+// wallet.render(
+//   <React.StrictMode>
+//     <BrowserRouter>
+//     <Loadwallet /> 
+//     </BrowserRouter>
+      
+//   </React.StrictMode>
+// );
+// const dapp = ReactDOM.createRoot(document.getElementById('dapp'));
+// dapp.render(
+//   <React.StrictMode>
+//       <Dapp /> 
+//   </React.StrictMode>
+// );
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
