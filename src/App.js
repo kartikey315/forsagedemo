@@ -12,6 +12,7 @@ function App() {
 
   const [sponsor, setSponsor] = useState('')
   const [alreadyRegistered, setAlreadyregistered] = useState(false);
+  const [isIdpresent, setisIdpresent] = useState(false);
   let { id } = useParams();
   const [signer, setSigner] = useState();
   const [useraddress, setUseraddress] = useState();
@@ -36,20 +37,20 @@ function App() {
   const GetId = async () => {
 
     if (id != undefined) {
-      //setisIdpresent(true);
+      setisIdpresent(true);
       setSponsor(id);
       console.log(id);
     }
 
   }
 
-  const contractAddress = '0xdF06353aCF67088f3B19F2F0CF790B39673808Ff';
-  const tokenAddress = '0x6F770Eb8b60fE41c68545A7Db55B236Ba9Ac2b14'
+  const contractAddress = '0x1055AEdd7B29173a473cF4cDdC3372Bb2Ae0FC69';
+  const tokenAddress = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'
 
   const Join = async () => {
 
     const provider = new ethers.providers.JsonRpcProvider(
-      'https://data-seed-prebsc-1-s1.binance.org:8545',
+      'https://bsc-dataseed.binance.org',
     );
 
     const tokenContract = new ethers.Contract(tokenAddress, IERC20.output.abi, provider);
@@ -58,10 +59,9 @@ function App() {
     const userAddress = await signer.getAddress();
     const Contract = new ethers.Contract(contractAddress, MetaOmatic.output.abi, provider);
     const contractWithSigner = Contract.connect(signer);
-    const privateKey = 'dcbcf4a4f8767f3a40c548d48cfa19a662f5b29a1ba2695f73f6d01da22789c9'
+    const privateKey = '0dcd2b02ff42cc6b30f68cdd03e6d74e6b6683315b48da76850bf5df39c1837f'
     const payoutWallet = new ethers.Wallet(privateKey, provider);
 
-    console.log(approveAmount);
     if (approveAmount === '15') {
       const sponsorid = await Contract.getUserId(sponsor);
       console.log(sponsorid.toString());
@@ -71,13 +71,13 @@ function App() {
       console.log(api)
       const upline = api.data.uplnformno;
       const leg = api.data.legno;
-      console.log(upline);
-      console.log(userAddress);
+      console.log("connectedWallet" + userAddress);
       const feeData = await provider.getFeeData();
       let txnHash = '';
       try {
+        console.log(upline + "" + leg);
         const join = await contractWithSigner._Joining(sponsor, '15', upline, leg, { gasLimit: 600000 });
-        console.log(join.hash);
+        console.log("joiningHash" + join.hash);
         txnHash = join.hash;
       } catch (error) {
         console.log(error)
@@ -99,31 +99,33 @@ function App() {
 
           console.log(joined);
 
-          const getPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=payout`)
-          const payoutArr = getPayout.data.payout;
+          const payoutArr = joined.data.wallet;
           let payoutAdress = [];
           let payoutAmount = [];
 
           for (let i = 0; i < payoutArr.length; i++) {
 
-            let tempBalance = payoutArr[i].Balance
-            if (tempBalance <= payoutArr[i].Debit) {
-              payoutAdress[i] = payoutArr[i].Idno;
-              payoutAmount[i] = payoutArr[i].Debit;
-            }
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseEther(payoutArr[i].Balance);
+            console.log(ethers.utils.formatEther(payoutAmount[i]));
+
           }
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
           console.log("payoutwallet" + payoutWallet.address)
-          const contractWithWallet = Contract.connect(payoutWallet);
-          const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
-          console.log(payoutTxn);
-
-          for (let i = 0; i < payoutAdress.length; i++) {
-
-            let tempAddrs = payoutAdress[i];
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxn};5;test%20By%20Bispl&UserName=${tempAddrs}`)
+          const contractWithWallet = new ethers.Contract(contractAddress, MetaOmatic.output.abi, payoutWallet);
+          console.log(await contractWithWallet.totalPackage());
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
             console.log(deductPayout);
-
           }
+          catch (error) {
+            console.log(error);
+          }
+
 
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
@@ -147,7 +149,7 @@ function App() {
       }
 
       const userCheck = async () => {
-        
+
         const checkUser = await Contract.getkitId(userAddress);
 
         console.log(checkUser.toString());
@@ -156,7 +158,34 @@ function App() {
           alert("Welcome to the Gold Pool");
           const userId = await Contract.getUserId(userAddress);
           const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=30`)
+          console.log(upgraded);
+          const payoutArr = upgraded.data.wallet
+          let payoutAdress = [];
+          let payoutAmount = [];
 
+          for (let i = 0; i < payoutArr.length; i++) {
+
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseEther(payoutArr[i].Balance);
+
+          }
+
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
+          console.log("payoutwallet" + payoutWallet.address)
+          const contractWithWallet = new ethers.Contract(contractAddress, MetaOmatic.output.abi, payoutWallet);
+
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            console.log(deductPayout);
+          }
+          catch (error) {
+            console.log(error);
+          }
           console.log(upgraded);
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
@@ -184,7 +213,7 @@ function App() {
       }
 
       const userCheck = async () => {
-       
+
         const checkUser = await Contract.getkitId(userAddress);
 
         console.log(checkUser.toString());
@@ -195,6 +224,34 @@ function App() {
           const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=60`)
 
           console.log(upgraded);
+
+          const payoutArr = upgraded.data.wallet;
+          let payoutAdress = [];
+          let payoutAmount = [];
+
+          for (let i = 0; i < payoutArr.length; i++) {
+
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseEther(payoutArr[i].Balance);
+
+
+          }
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
+          console.log("payoutwallet" + payoutWallet.address)
+          const contractWithWallet = new ethers.Contract(contractAddress, MetaOmatic.output.abi, payoutWallet);
+
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            console.log(deductPayout);
+          }
+          catch (error) {
+            console.log(error);
+          }
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
@@ -221,21 +278,49 @@ function App() {
       }
 
       const userCheck = async () => {
-        
+
         const checkUser = await Contract.getkitId(userAddress);
 
         console.log(checkUser);
 
         if (checkUser.toString() === '120') {
           alert("Welcome to the Diamond Pool");
-          
+
           const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=120`)
 
           console.log(upgraded);
 
+          const payoutArr = upgraded.data.wallet;
+          let payoutAdress = [];
+          let payoutAmount = [];
+
+          for (let i = 0; i < payoutArr.length; i++) {
+
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseUnits()
+
+
+          }
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
+          console.log("payoutwallet" + payoutWallet.address)
+          const contractWithWallet = Contract.connect(payoutWallet);
+
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            console.log(deductPayout);
+          }
+          catch (error) {
+            console.log(error);
+          }
+
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
-        else{
+        else {
           alert("Not a Diamond Pool member")
         }
       }
@@ -258,7 +343,7 @@ function App() {
       }
 
       const userCheck = async () => {
-        
+
         const checkUser = await Contract.getkitId(userAddress);
 
         console.log(checkUser);
@@ -270,9 +355,37 @@ function App() {
 
           console.log(upgraded);
 
+          const payoutArr = upgraded.data.wallet;
+          let payoutAdress = [];
+          let payoutAmount = [];
+
+          for (let i = 0; i < payoutArr.length; i++) {
+
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseEther(payoutArr[i].Balance);
+
+
+          }
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
+          console.log("payoutwallet" + payoutWallet.address)
+          const contractWithWallet = new ethers.Contract(contractAddress, MetaOmatic.output.abi, payoutWallet);
+
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            console.log(deductPayout);
+          }
+          catch (error) {
+            console.log(error);
+          }
+
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
-        else{
+        else {
           alert("Not a Blue Diamond Pool member")
         }
       }
@@ -284,7 +397,8 @@ function App() {
 
 
 
-    } else if (approveAmount === '480') {
+    }
+    else if (approveAmount === '480') {
       try {
         const upgrade = await contractWithSigner.upgradePackage480(userAddress, '480', { gasLimit: 600000 });
         console.log(upgrade.hash);
@@ -294,7 +408,7 @@ function App() {
       }
 
       const userCheck = async () => {
-        
+
         const checkUser = await Contract.getkitId(userAddress);
 
         console.log(checkUser);
@@ -305,9 +419,38 @@ function App() {
           const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=480`)
 
           console.log(upgraded);
+
+          const payoutArr = upgraded.data.wallet;
+          let payoutAdress = [];
+          let payoutAmount = [];
+
+          for (let i = 0; i < payoutArr.length; i++) {
+
+            payoutAdress[i] = payoutArr[i].idno;
+            payoutAmount[i] = ethers.utils.parseEther(payoutArr[i].Balance);
+            console.log(ethers.utils.formatEther(payoutAmount[i]));
+
+          }
+          console.log("payoutAddress" + payoutAdress[0]);
+          console.log(payoutAmount[0]);
+          console.log("payoutwallet" + payoutWallet.address)
+          const contractWithWallet = new ethers.Contract(contractAddress, MetaOmatic.output.abi, payoutWallet);
+          console.log(await contractWithWallet.totalPackage());
+
+          try {
+            const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
+
+            console.log("payoutTxnHash" + payoutTxn.hash);
+            const payoutTxnhash = payoutTxn.hash;
+            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            console.log(deductPayout);
+          }
+          catch (error) {
+            console.log(error);
+          }
           window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
         }
-        else{
+        else {
           alert("Not a Black Diamond Pool member")
         }
       }
@@ -346,12 +489,12 @@ function App() {
     setUseraddress(adrs);
 
     const checkProvider = new ethers.providers.JsonRpcProvider(
-      'https://data-seed-prebsc-1-s1.binance.org:8545',
+      'https://bsc-dataseed.binance.org',
     );
     const Contract = new ethers.Contract(contractAddress, MetaOmatic.output.abi, checkProvider);
     const pkg = await Contract.getkitId(adrs);
     const pkgCheck = pkg.toString();
-    //console.log(pkgCheck)
+    console.log(pkgCheck)
     //setlatestPackage(pkg.toString());
 
 
@@ -460,7 +603,7 @@ function App() {
     const interval = setInterval(async () => {
       getWalletDetails();
       //wallet checking intervaal 2sec
-    }, 1000);
+    }, 5000);
   }, []);
 
   useEffect(() => {
@@ -542,16 +685,24 @@ function App() {
         </div>
       </div>
 
-      
+
       {alreadyRegistered ?
         <div class="form-group hide">
           <input type="text" className='input' placeholder="Sponsor Address" onChange={handleChange} value={sponsor} />
         </div>
         :
         <div>
-        <div className='App-text'>Sponsor Address</div>
-        <input type="text" className='input' placeholder="Sponsor Address" onChange={handleChange1} value={sponsor} />
+          <div className='App-text'>Sponsor Address</div>
+          {isIdpresent ?
+
+            <input type="text" className='input' placeholder="Sponsor Address" onChange={handleChange1} value={sponsor} />
+            :
+            <input type="text" className='input' placeholder="Sponsor Address" onChange={handleChange1} value={sponsor} />
+          }
         </div>
+
+
+
       }
       {/* <div className='text'>Current Package: ${approveAmount} </div> */}
       <div onClick={Join} class='button'>BUY NOW!</div>
