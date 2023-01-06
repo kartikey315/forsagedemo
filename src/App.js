@@ -6,7 +6,7 @@ import MetaOmatic from './abi.json';
 import IERC20 from './tokenABI.json'
 import './App.css'
 import Web3Modal from "web3modal"
-
+import { key } from './config'
 
 function App() {
 
@@ -44,7 +44,7 @@ function App() {
 
   }
 
-  const contractAddress = '0x1055AEdd7B29173a473cF4cDdC3372Bb2Ae0FC69';
+  const contractAddress = '0xdb6d14c0be460A67893122e2a6b9b2A5Bf9a52EC';
   const tokenAddress = '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'
 
   const Join = async () => {
@@ -56,17 +56,18 @@ function App() {
     const tokenContract = new ethers.Contract(tokenAddress, IERC20.output.abi, provider);
     const tokenWithSigner = tokenContract.connect(signer);
     const approve = await tokenWithSigner.approve(contractAddress, approveAmount + "000000000000000000");
+    console.log(approve);
     const userAddress = await signer.getAddress();
     const Contract = new ethers.Contract(contractAddress, MetaOmatic.output.abi, provider);
     const contractWithSigner = Contract.connect(signer);
-    const privateKey = '0dcd2b02ff42cc6b30f68cdd03e6d74e6b6683315b48da76850bf5df39c1837f'
+    const privateKey = key;
     const payoutWallet = new ethers.Wallet(privateKey, provider);
 
     if (approveAmount === '15') {
       const sponsorid = await Contract.getUserId(sponsor);
       console.log(sponsorid.toString());
       const api = await axios.get(
-        `http://htcg.io/checklogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=GetUpline&sponsorid=${sponsorid.toString()}`,
+        `https://htcg.io/checklogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=GetUpline&sponsorid=${sponsorid.toString()}`,
       );
       console.log(api)
       const upline = api.data.uplnformno;
@@ -94,9 +95,9 @@ function App() {
           alert("Welcome to the Club");
           const userId = await Contract.getUserId(userAddress);
           console.log("userId" + userId.toString());
-          const joined = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=joining&username=${userAddress}
+          const joined = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=joining&username=${userAddress}
         &formno=${userId.toString()}&uplnformNo=${upline}&legno=${leg}&sponsorid=${sponsorid.toString()}&amount=15&txnhash=${txnHash}`)
-
+          const txnId = joined.data.txnid;
           console.log(joined);
 
           const payoutArr = joined.data.wallet;
@@ -118,8 +119,10 @@ function App() {
           try {
             const payoutTxn = await contractWithWallet.refPayout(payoutAdress, payoutAmount, { gasLimit: 900000 });
             console.log("payoutTxnHash" + payoutTxn.hash);
+            
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
+            
             console.log(deductPayout);
           }
           catch (error) {
@@ -127,7 +130,7 @@ function App() {
           }
 
 
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
       }
       setTimeout(() => {
@@ -157,8 +160,9 @@ function App() {
         if (checkUser.toString() === '30') {
           alert("Welcome to the Gold Pool");
           const userId = await Contract.getUserId(userAddress);
-          const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=30`)
+          const upgraded = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=ActivationID&userid=test&memberid=${userAddress}&kit=30`)
           console.log(upgraded);
+          const txnId = upgraded.data.txnid;
           const payoutArr = upgraded.data.wallet
           let payoutAdress = [];
           let payoutAmount = [];
@@ -180,14 +184,14 @@ function App() {
 
             console.log("payoutTxnHash" + payoutTxn.hash);
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
             console.log(deductPayout);
           }
           catch (error) {
             console.log(error);
           }
           console.log(upgraded);
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
           alert("Not a Gold Pool member")
@@ -221,9 +225,10 @@ function App() {
         if (checkUser.toString() === '60') {
           alert("Welcome to the Platinum Pool");
           const userId = await Contract.getUserId(userAddress);
-          const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=60`)
+          const upgraded = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=ActivationID&userid=test&memberid=${userAddress}&kit=60`)
 
           console.log(upgraded);
+          const txnId = upgraded.data.txnid;
 
           const payoutArr = upgraded.data.wallet;
           let payoutAdress = [];
@@ -246,13 +251,13 @@ function App() {
 
             console.log("payoutTxnHash" + payoutTxn.hash);
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
             console.log(deductPayout);
           }
           catch (error) {
             console.log(error);
           }
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
           alert("Not a Platinum pool member");
@@ -286,9 +291,10 @@ function App() {
         if (checkUser.toString() === '120') {
           alert("Welcome to the Diamond Pool");
 
-          const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=120`)
+          const upgraded = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=ActivationID&userid=test&memberid=${userAddress}&kit=120`)
 
           console.log(upgraded);
+          const txnId = upgraded.data.txnid;
 
           const payoutArr = upgraded.data.wallet;
           let payoutAdress = [];
@@ -311,14 +317,14 @@ function App() {
 
             console.log("payoutTxnHash" + payoutTxn.hash);
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
             console.log(deductPayout);
           }
           catch (error) {
             console.log(error);
           }
 
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
           alert("Not a Diamond Pool member")
@@ -351,9 +357,10 @@ function App() {
         if (checkUser.toString() === '240') {
           alert("Welcome to the Blue Diamond Pool");
           const userId = await Contract.getUserId(userAddress);
-          const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=240`)
+          const upgraded = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=ActivationID&userid=test&memberid=${userAddress}&kit=240`)
 
           console.log(upgraded);
+          const txnId = upgraded.data.txnid;
 
           const payoutArr = upgraded.data.wallet;
           let payoutAdress = [];
@@ -376,14 +383,14 @@ function App() {
 
             console.log("payoutTxnHash" + payoutTxn.hash);
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
             console.log(deductPayout);
           }
           catch (error) {
             console.log(error);
           }
 
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
           alert("Not a Blue Diamond Pool member")
@@ -416,9 +423,11 @@ function App() {
         if (checkUser.toString() === '480') {
           alert("Welcome to the Black Diamond Pool");
           const userId = await Contract.getUserId(userAddress);
-          const upgraded = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=UpgradeID&userid=test&passwd=55713&memberid=${userAddress}&kit=480`)
+          const upgraded = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=ActivationID&userid=test&memberid=${userAddress}&kit=480`)
 
           console.log(upgraded);
+          const txnId = upgraded.data.txnid;
+          console.log("txid" + txnId);
 
           const payoutArr = upgraded.data.wallet;
           let payoutAdress = [];
@@ -442,13 +451,13 @@ function App() {
 
             console.log("payoutTxnHash" + payoutTxn.hash);
             const payoutTxnhash = payoutTxn.hash;
-            const deductPayout = await axios.get(`http://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=DeductWalletAmount&TxnData=${payoutTxnhash};5;test%20By%20Bispl&UserName=${payoutAdress}`)
+            const deductPayout = await axios.get(`https://htcg.io/CheckLogin.aspx?token=Monosmos67897sf2ntskhsr042jas65ix&action=deductwallet&TxnData=${payoutTxnhash}&txnid=${txnId}&Status=SUCCESS`)
             console.log(deductPayout);
           }
           catch (error) {
             console.log(error);
           }
-          window.open(`http://login.htcg.io/?idno=${userAddress}`, "self")
+          window.open(`https://login.htcg.io/?idno=${userAddress}`, "self")
         }
         else {
           alert("Not a Black Diamond Pool member")
